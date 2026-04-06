@@ -1,29 +1,37 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for
 import requests
 
-BACKEND_URL = 'http://0.0.0.0:5000'
-app = Flask(__name__) #created a flask application
 
-@app.route('/') #creating a route
-def home():
+app = Flask(__name__)
+
+
+BACKEND_URL = "http://127.0.0.1:5001"
+
+# Form page
+@app.route('/')
+def form():
     return render_template('index.html')
 
-@app.route('/signup', methods=['POST'])
-def signup():
+# Submit form
+@app.route('/submit', methods=['POST'])
+def submit():
     try:
-        signup_data = dict(request.form)
-        print(signup_data)  # debug
-    
-        requests.post(BACKEND_URL + '/signup', json=signup_data)
-    
-        return redirect('/success')
+        data = dict(request.form)
+
+        response = requests.post(f"{BACKEND_URL}/submit", json=data)
+
+        if response.status_code == 200:
+            return redirect(url_for('success'))
+        else:
+            return render_template('index.html', error=response.text)
+
     except Exception as e:
         return render_template('index.html', error=str(e))
 
+# Success page
 @app.route('/success')
 def success():
-     return render_template('success.html')
+    return render_template('success.html')
 
-if __name__ == '__main__': #calling function
-
-   app.run(host='0.0.0.0', port=4000, debug=True) #to update changes automatically
+if __name__ == '__main__':
+    app.run(port=5000, debug=True)

@@ -1,47 +1,43 @@
 from flask import Flask, request, jsonify
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
+import json
 from dotenv import load_dotenv
 import os
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
+
 
 load_dotenv()
 MONGO_URI = os.getenv('MONGO_URI')
 
-# Create a new client and connect to the server
 client = MongoClient(MONGO_URI, server_api=ServerApi('1'))
 
-db = client.test
+db = client["testdb"]
+collection = db["users"]
+app = Flask(__name__)
 
-collection = db["flask_tutorials"]
 
-app = Flask(__name__) 
-
-@app.route('/signup', methods=['POST'])
-def signup():
-    try:
-        signup_data = request.get_json()
-        collection.insert_one(signup_data)
-        return redirect('/success')
-    except Exception as e:
-        return render_template('index.html', error=str(e))
-
-@app.route('/success')
-def success():
-     return render_template('success.html')
-
-@app.route('/api')
-def view():
-    data = collection.find()
-    data = list(data)
-    for item in data:
-        print(item)
-        del item['_id']
-    data ={
-        'data': data
-    }
-
+# API: Read from file
+@app.route('/api', methods=['GET'])
+def get_data():
+    with open('data.json') as file:
+        data = json.load(file)
     return jsonify(data)
 
-if __name__ == '__main__': #calling function
+# API: Insert into MongoDB
+@app.route('/submit', methods=['POST'])
+def submit():
+    try:
+        data = request.json
+        print("Received Data:", data)   
+        result = collection.insert_one(data)
+        print("Inserted ID:", result.inserted_id)  
+        print("DB NAME:", db.name)
+        print("TOTAL DOCUMENTS:", collection.count_documents({}))
 
-    app.run(host='0.0.0.0', port=5000, debug=True)
+
+        return jsonify({"message": "Success"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(port=5001, debug=True)
